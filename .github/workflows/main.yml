@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: on pull request, Dockerfile lint
-    - uses: jwr0/dockerfile-linter-action
+    - name: Checkout
+      uses: actions/checkout@v1
+    - name: on pull request, Dockerfile lint 
+      uses: jwr0/dockerfile-linter-action
