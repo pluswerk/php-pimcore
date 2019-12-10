@@ -92,5 +92,4 @@ RUN go get -u github.com/fogleman/primitive \
     && DEBIAN_FRONTEND=noninteractive apt-get clean
 
 RUN apt install -y librsvg2-bin
-COPY .crontab /etc/cron.d/project-plan
 WORKDIR /app/
