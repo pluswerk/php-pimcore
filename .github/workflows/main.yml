@@ -1,0 +1,13 @@
+name: CI
+
+on: [pull_request]
+
+jobs:
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: on pull request, Dockerfile lint
+    - uses: jwr0/dockerfile-linter-action
