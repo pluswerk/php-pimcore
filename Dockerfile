@@ -1,95 +1,124 @@
-ARG FROM=pluswerk/php-dev:nginx-7.3
-FROM $FROM
+ARG FROM=webdevops/php-nginx:7.4
+ARG FROM=pluswerk/php-dev
 
-ENV NODE_VERSION 11.12.0
-RUN buildDeps='xz-utils' \
-    && ARCH= && dpkgArch="$(dpkg --print-architecture)" \
-    && case "${dpkgArch##*-}" in \
-      amd64) ARCH='x64';; \
-      ppc64el) ARCH='ppc64le';; \
-      s390x) ARCH='s390x';; \
-      arm64) ARCH='arm64';; \
-      armhf) ARCH='armv7l';; \
-      i386) ARCH='x86';; \
-      *) echo "unsupported architecture"; exit 1 ;; \
-    esac \
-    && set -ex && mkdir -p /usr/share/man/man1 \
-    && apt-get update && apt-get install -y ca-certificates \
-        default-jre \
-        default-jdk \
-        curl \
-        wget \
-        gnupg \
-        dirmngr \
-        $buildDeps --no-install-recommends \
-    && \
-    for key in \
-      94AE36675C464D64BAFA68DD7434390BDBE9B9C5 \
-      FD3A5288F042B6850C66B31F09FE44734EB7990E \
-      71DCFD284A79C3B38668286BC97EC7A07EDE3FC1 \
-      DD8F2338BAE7501E3DD5AC78C273792F7D83545D \
-      C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8 \
-      B9AE9905FFD7803F25714661B63B535A4C206CA9 \
-      77984A986EBC2AA786BC0F66B01FBB92821C587A \
-      8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600 \
-      4ED778F539E3634C779C87C6D7062848A1AB005C \
-      A48C2BEE680E841632CD4E44F07496B3EB3C1762 \
-      B9E2F5981AA6E0CD28160D9FF13993A75599653C \
-    ; do \
-      gpg --batch --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys "$key" || \
-      gpg --batch --keyserver hkp://ipv4.pool.sks-keyservers.net --recv-keys "$key" || \
-      gpg --batch --keyserver hkp://pgp.mit.edu:80 --recv-keys "$key" ; \
-    done \
-    && curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-$ARCH.tar.xz" \
-    && curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
-    && gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
-    && grep " node-v$NODE_VERSION-linux-$ARCH.tar.xz\$" SHASUMS256.txt | sha256sum -c - \
-    && tar -xJf "node-v$NODE_VERSION-linux-$ARCH.tar.xz" -C /usr/local --strip-components=1 --no-same-owner \
-    && rm "node-v$NODE_VERSION-linux-$ARCH.tar.xz" SHASUMS256.txt.asc SHASUMS256.txt \
-    && apt-get purge -y --auto-remove $buildDeps \
-    && ln -s /usr/local/bin/node /usr/local/bin/nodejs
+FROM golang:1.11-alpine AS golang
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    ffmpeg \
-    libreoffice \
-    libreoffice-math \
-    xfonts-75dpi \
-    poppler-utils \
-    inkscape \
-    libxrender1 \
-    libfontconfig1 \
-    ghostscript \
-    librsvg2-dev \
-    libimage-exiftool-perl
+RUN apk add --update git && rm /var/cache/apk/*
+RUN go get -u github.com/fogleman/primitive
 
-RUN wget https://github.com/imagemin/zopflipng-bin/raw/master/vendor/linux/zopflipng -O /usr/local/bin/zopflipng \
+FROM alpine as dependencies
+
+RUN apk add --update wget tar git xz && rm /var/cache/apk/*
+
+RUN wget -q https://github.com/imagemin/zopflipng-bin/raw/main/vendor/linux/zopflipng -O /usr/local/bin/zopflipng \
     && chmod 0755 /usr/local/bin/zopflipng \
-    && wget https://github.com/imagemin/pngcrush-bin/raw/master/vendor/linux/pngcrush -O /usr/local/bin/pngcrush \
+    && wget -q https://github.com/imagemin/pngcrush-bin/raw/main/vendor/linux/pngcrush -O /usr/local/bin/pngcrush \
     && chmod 0755 /usr/local/bin/pngcrush \
-    && wget https://github.com/imagemin/jpegoptim-bin/raw/master/vendor/linux/jpegoptim -O /usr/local/bin/jpegoptim \
+    && wget -q https://github.com/imagemin/jpegoptim-bin/raw/main/vendor/linux/jpegoptim -O /usr/local/bin/jpegoptim \
     && chmod 0755 /usr/local/bin/jpegoptim \
-    && wget https://github.com/imagemin/pngout-bin/raw/master/vendor/linux/x64/pngout -O /usr/local/bin/pngout \
+    && wget -q https://github.com/imagemin/pngout-bin/raw/main/vendor/linux/x64/pngout -O /usr/local/bin/pngout \
     && chmod 0755 /usr/local/bin/pngout \
-    && wget https://github.com/imagemin/advpng-bin/raw/master/vendor/linux/advpng -O /usr/local/bin/advpng \
+    && wget -q https://github.com/imagemin/advpng-bin/raw/main/vendor/linux/advpng -O /usr/local/bin/advpng \
     && chmod 0755 /usr/local/bin/advpng \
-    && wget https://github.com/imagemin/mozjpeg-bin/raw/master/vendor/linux/cjpeg -O /usr/local/bin/cjpeg \
-    && chmod 0755 /usr/local/bin/cjpeg \
-    && npm install -g sqip
+    && wget -q https://github.com/imagemin/mozjpeg-bin/raw/main/vendor/linux/cjpeg -O /usr/local/bin/cjpeg \
+    && chmod 0755 /usr/local/bin/cjpeg
 
-WORKDIR /opt
+RUN cd /tmp && wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz \
+            && tar xvf wkhtmltox-0.12.4_linux-generic-amd64.tar.xz \
+            && mv wkhtmltox/bin/wkhtmlto* /usr/bin/ \
+            && chmod 0755 /usr/bin/wkhtmltopdf \
+            && chmod 0755 /usr/bin/wkhtmltoimage \
+            && rm -rf wkhtmltox
 
-ENV GOLANG_VERSION 1.12.6
-RUN wget https://dl.google.com/go/go$GOLANG_VERSION.linux-amd64.tar.gz && tar -xf go$GOLANG_VERSION.linux-amd64.tar.gz \
-    && rm go$GOLANG_VERSION.linux-amd64.tar.gz  \
-    && mkdir gopath
-ENV GOPATH=/opt/gopath
-ENV GOROOT=/opt/go
-ENV PATH=$PATH:$GOPATH/bin:$GOROOT/bin
+FROM $FROM as php
 
-RUN go get -u github.com/fogleman/primitive \
-    && cd /usr/local/bin \
-    && ln -s /usr/lib/go/bin/primitive \
-    && DEBIAN_FRONTEND=noninteractive apt-get clean
+COPY --from=golang /go/bin/primitive /usr/local/bin/primitive
+COPY --from=dependencies /usr/local/bin/zopflipng /usr/local/bin/zopflipng
+COPY --from=dependencies /usr/local/bin/pngcrush /usr/local/bin/pngcrush
+COPY --from=dependencies /usr/local/bin/pngout /usr/local/bin/pngout
+COPY --from=dependencies /usr/local/bin/advpng /usr/local/bin/advpng
+COPY --from=dependencies /usr/local/bin/cjpeg /usr/local/bin/cjpeg
+COPY --from=dependencies /usr/bin/wkhtmltopdf /usr/bin/wkhtmltopdf
+COPY --from=dependencies /usr/bin/wkhtmltoimage /usr/bin/wkhtmltoimage
 
-RUN apt install -y librsvg2-bin
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    poppler-utils \
+    libimage-exiftool-perl \
+    webp \
+    inkscape \
+    ghostscript \
+    ffmpeg \
+    graphviz \
+    librsvg2-bin \
+    libreoffice \
+    opencv-data \
+    jpegoptim \
+    libjpeg-dev \
+    libjpeg62-turbo-dev \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN cd /tmp \
+        && mkdir install-nginx \
+        && cd install-nginx \
+        && echo "deb http://nginx.org/packages/mainline/debian `lsb_release -cs` nginx" >> /etc/apt/sources.list.d/nginx.list \
+        && echo "deb-src http://nginx.org/packages/mainline/debian `lsb_release -cs` nginx" >> /etc/apt/sources.list.d/nginx.list \
+        && curl -fsSL https://nginx.org/keys/nginx_signing.key | apt-key add - \
+        && apt-key fingerprint ABF5BD827BD9BF62 \
+        && apt-get update && apt-get remove -y nginx nginx-full && DEBIAN_FRONTEND=noninteractive apt-get install -q -y -o Dpkg::Options::=--force-confdef nginx \
+        && apt source nginx \
+        && git clone https://github.com/google/ngx_brotli.git \
+        && cd ngx_brotli \
+        && git submodule update --init \
+        && cd .. \
+        && apt-get build-dep -y nginx \
+        && apt-get install -y libperl-dev python3-pip \
+        && cd nginx-1.* \
+        && ./configure \
+                --with-http_ssl_module \
+                --with-http_realip_module \
+                --with-http_addition_module \
+                --with-http_sub_module \
+                --with-http_dav_module \
+                --with-http_flv_module \
+                --with-http_mp4_module \
+                --with-http_gunzip_module \
+                --with-http_gzip_static_module \
+                --with-http_random_index_module \
+                --with-http_secure_link_module \
+                --with-http_stub_status_module \
+                --with-http_auth_request_module \
+                --with-http_perl_module=dynamic \
+                --with-threads \
+                --with-stream \
+                --with-stream_ssl_module \
+                --with-stream_ssl_preread_module \
+                --with-stream_realip_module \
+                --with-http_slice_module \
+                --with-mail \
+                --with-mail_ssl_module \
+                --with-compat \
+                --with-file-aio \
+                --with-http_v2_module \
+                --with-compat \
+                --add-dynamic-module=../ngx_brotli \
+        && make modules \
+        && cp objs/*.so /usr/lib/nginx/modules \
+        && ln -s /usr/lib/nginx/modules /etc/nginx/modules \
+        && echo "load_module modules/ngx_http_brotli_filter_module.so;" >> /etc/nginx/modules-enabled/brotli.conf \
+        && echo "load_module modules/ngx_http_brotli_static_module.so;" >> /etc/nginx/modules-enabled/brotli.conf \
+        && rm -rf /var/lib/apt/lists/* \
+        && rm -rf /tmp/install-nginx
+
+# RUN cd /tmp && git clone https://gitlab.com/wavexx/facedetect.git \
+#            && pip3 install numpy opencv-python \
+#            && cd facedetect \
+#            && cp facedetect /usr/local/bin \
+#            && cd .. \
+#            && rm -rf facedetect
+
+RUN docker-service enable postfix
+
+COPY nginx.conf /opt/docker/etc/nginx/vhost.common.d/00-pimcore.conf_deactivated
+
 WORKDIR /app/
