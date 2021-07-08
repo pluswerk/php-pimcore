@@ -1,5 +1,4 @@
 ARG FROM=webdevops/php-nginx:7.4
-ARG FROM=pluswerk/php-dev
 
 FROM golang:1.11-alpine AS golang
 
@@ -118,6 +117,9 @@ RUN cd /tmp \
 #            && rm -rf facedetect
 
 RUN docker-service enable postfix
+
+# https://stackoverflow.com/questions/52998331/imagemagick-security-policy-pdf-blocking-conversion#comment110879511_59193253
+RUN sed -i '/disable ghostscript format types/,+6d' /etc/ImageMagick-6/policy.xml
 
 COPY nginx.conf /opt/docker/etc/nginx/vhost.common.d/00-pimcore.conf_deactivated
 
