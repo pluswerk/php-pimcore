@@ -103,9 +103,6 @@ RUN cd /tmp \
                 --add-dynamic-module=../ngx_brotli \
         && make modules \
         && cp objs/*.so /usr/lib/nginx/modules \
-        && ln -s /usr/lib/nginx/modules /etc/nginx/modules \
-        && echo "load_module modules/ngx_http_brotli_filter_module.so;" >> /etc/nginx/modules-enabled/brotli.conf \
-        && echo "load_module modules/ngx_http_brotli_static_module.so;" >> /etc/nginx/modules-enabled/brotli.conf \
         && rm -rf /var/lib/apt/lists/* \
         && rm -rf /tmp/install-nginx
 
@@ -121,6 +118,7 @@ RUN docker-service enable postfix
 # https://stackoverflow.com/questions/52998331/imagemagick-security-policy-pdf-blocking-conversion#comment110879511_59193253
 RUN sed -i '/disable ghostscript format types/,+6d' /etc/ImageMagick-6/policy.xml
 
-COPY nginx.conf /opt/docker/etc/nginx/vhost.common.d/00-pimcore.conf_deactivated
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY additional-nginx.conf /opt/docker/etc/nginx/vhost.common.d/00-pimcore.conf_deactivated
 
 WORKDIR /app/
