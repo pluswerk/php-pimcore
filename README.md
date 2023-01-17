@@ -10,5 +10,7 @@ View in [Docker Hub](https://hub.docker.com/r/pluswerk/php-pimcore/tags?page=1&o
 - pluswerk/php-pimcore:7.4-dev 
 - pluswerk/php-pimcore:8.0
 - pluswerk/php-pimcore:8.0-dev
-- pluswerk/php-pimcore:8.1 (untested)
-- pluswerk/php-pimcore:8.1-dev (untested)
+- pluswerk/php-pimcore:8.1
+- pluswerk/php-pimcore:8.1-dev
+- pluswerk/php-pimcore:8.2
+- pluswerk/php-pimcore:8.2-dev
