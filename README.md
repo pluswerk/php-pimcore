@@ -1,8 +1,8 @@
 # pimcore PROD & DEV image
 
-derived from webdevops/php-nginx and pluswerk/php-dev
+derived from [webdevops/php-nginx](https://github.com/webdevops/Dockerfile) and [pluswerk/php-dev](https://github.com/pluswerk/php-dev)
 
-View in [Docker Hub](https://hub.docker.com/r/pluswerk/php-pimcore/tags?page=1&ordering=last_updated)
+View in [Github Container Registry](https://github.com/pluswerk/php-pimcore/pkgs/container/php-pimcore/versions?filters%5Bversion_type%5D=tagged)
 
 ## TAGS
 
