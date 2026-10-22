@@ -1,3 +1,5 @@
+This project is not maintained anymore. Use the official pimcores Images instead.
+
 # pimcore PROD & DEV image
 
 derived from [webdevops/php-nginx](https://github.com/webdevops/Dockerfile) and [pluswerk/php-dev](https://github.com/pluswerk/php-dev)
